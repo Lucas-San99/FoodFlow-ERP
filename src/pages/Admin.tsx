@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LogOut } from "lucide-react";
 import { MenuManagement } from "@/components/admin/MenuManagement";
 import { UserManagement } from "@/components/admin/UserManagement";
+import { UnitsManagement } from "@/components/admin/UnitsManagement";
 
 export default function Admin() {
   const { signOut } = useAuth();
@@ -22,9 +23,10 @@ export default function Admin() {
 
       <main className="container mx-auto p-4">
         <Tabs defaultValue="menu" className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsList className="grid w-full max-w-md grid-cols-3">
             <TabsTrigger value="menu">Cardápio</TabsTrigger>
             <TabsTrigger value="users">Usuários</TabsTrigger>
+            <TabsTrigger value="units">Unidades</TabsTrigger>
           </TabsList>
 
           <TabsContent value="menu">
@@ -33,6 +35,10 @@ export default function Admin() {
 
           <TabsContent value="users">
             <UserManagement />
+          </TabsContent>
+
+          <TabsContent value="units">
+            <UnitsManagement />
           </TabsContent>
         </Tabs>
       </main>
