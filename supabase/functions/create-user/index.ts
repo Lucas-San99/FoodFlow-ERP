@@ -10,6 +10,7 @@ interface CreateUserRequest {
   password: string
   fullName: string
   role: 'waiter' | 'kitchen' | 'admin'
+  unitId?: string | null
 }
 
 Deno.serve(async (req) => {
@@ -56,9 +57,9 @@ Deno.serve(async (req) => {
     }
 
     // Parse request body
-    const { email, password, fullName, role }: CreateUserRequest = await req.json()
+    const { email, password, fullName, role, unitId }: CreateUserRequest = await req.json()
 
-    console.log(`Criando usuário: ${email} com role ${role}`)
+    console.log(`Criando usuário: ${email} com role ${role} e unidade ${unitId}`)
 
     // Create the user with admin client
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
@@ -81,12 +82,26 @@ Deno.serve(async (req) => {
 
     console.log(`Usuário criado com ID: ${newUser.user.id}`)
 
+    // Update profile with unit_id
+    const { error: profileUpdateError } = await supabaseAdmin
+      .from('profiles')
+      .update({ unit_id: unitId || null })
+      .eq('id', newUser.user.id)
+
+    if (profileUpdateError) {
+      console.error('Erro ao atualizar perfil com unit_id:', profileUpdateError)
+      // Try to delete the user if profile update fails
+      await supabaseAdmin.auth.admin.deleteUser(newUser.user.id)
+      throw new Error('Erro ao atualizar unidade do perfil')
+    }
+
     // Assign the role
     const { error: roleInsertError } = await supabaseAdmin
       .from('user_roles')
       .insert({
         user_id: newUser.user.id,
-        role: role
+        role: role,
+        unit_id: unitId || null
       })
 
     if (roleInsertError) {
@@ -96,7 +111,7 @@ Deno.serve(async (req) => {
       throw new Error('Erro ao atribuir função ao usuário')
     }
 
-    console.log(`Role ${role} atribuída ao usuário ${newUser.user.id}`)
+    console.log(`Role ${role} e unidade atribuídos ao usuário ${newUser.user.id}`)
 
     return new Response(
       JSON.stringify({

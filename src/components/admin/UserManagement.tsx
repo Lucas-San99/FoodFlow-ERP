@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Trash } from "lucide-react";
+import { Plus, Trash, Pencil } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { UserDialog } from "./UserDialog";
@@ -10,12 +10,12 @@ import { UserDialog } from "./UserDialog";
 export function UserManagement() {
   const [users, setUsers] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
 
   const loadUsers = async () => {
-    // Only load users that have not been deleted (deleted_at is NULL)
     const { data: profilesData, error: profilesError } = await supabase
       .from("profiles")
-      .select("*")
+      .select("*, units(name)")
       .is("deleted_at", null);
 
     if (profilesError) {
@@ -37,10 +37,23 @@ export function UserManagement() {
       return {
         ...profile,
         role: userRole?.role || null,
+        unit_name: profile.units?.name || null,
       };
     });
 
     setUsers(usersWithRoles || []);
+  };
+
+  const handleEdit = (user: any) => {
+    setSelectedUser(user);
+    setDialogOpen(true);
+  };
+
+  const handleCloseDialog = (open: boolean) => {
+    if (!open) {
+      setSelectedUser(null);
+    }
+    setDialogOpen(open);
   };
 
   useEffect(() => {
@@ -88,7 +101,7 @@ export function UserManagement() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Gerenciar Usuários</h2>
-        <Button onClick={() => setDialogOpen(true)}>
+        <Button onClick={() => { setSelectedUser(null); setDialogOpen(true); }}>
           <Plus className="mr-2 h-4 w-4" />
           Novo Usuário
         </Button>
@@ -104,16 +117,31 @@ export function UserManagement() {
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              <p className="text-sm text-muted-foreground">ID: {user.id}</p>
-              <Button
-                size="sm"
-                variant="destructive"
-                className="w-full"
-                onClick={() => handleDelete(user.id)}
-              >
-                <Trash className="mr-2 h-4 w-4" />
-                Desativar
-              </Button>
+              {user.unit_name && (
+                <p className="text-sm text-muted-foreground">
+                  Unidade: <span className="font-medium">{user.unit_name}</span>
+                </p>
+              )}
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => handleEdit(user)}
+                >
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Editar
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="flex-1"
+                  onClick={() => handleDelete(user.id)}
+                >
+                  <Trash className="mr-2 h-4 w-4" />
+                  Desativar
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -121,8 +149,9 @@ export function UserManagement() {
 
       <UserDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={handleCloseDialog}
         onSuccess={loadUsers}
+        user={selectedUser}
       />
     </div>
   );
