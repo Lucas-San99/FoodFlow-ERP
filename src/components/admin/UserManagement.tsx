@@ -12,9 +12,11 @@ export function UserManagement() {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const loadUsers = async () => {
+    // Only load users that have not been deleted (deleted_at is NULL)
     const { data: profilesData, error: profilesError } = await supabase
       .from("profiles")
-      .select("*");
+      .select("*")
+      .is("deleted_at", null);
 
     if (profilesError) {
       toast.error("Erro ao carregar usuários");
@@ -46,18 +48,30 @@ export function UserManagement() {
   }, []);
 
   const handleDelete = async (userId: string) => {
-    if (!confirm("Tem certeza que deseja excluir este usuário?")) return;
+    if (!confirm("Tem certeza que deseja desativar este usuário? Esta ação pode ser revertida.")) return;
 
-    // Note: This will cascade delete the profile and roles due to foreign key constraints
-    const { error } = await supabase.auth.admin.deleteUser(userId);
+    try {
+      // Get the current session to use for authentication
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error("Sessão não encontrada");
+      }
 
-    if (error) {
-      toast.error("Erro ao excluir usuário");
-      return;
+      // Call the edge function to soft delete the user
+      const { data, error } = await supabase.functions.invoke('soft-delete-user', {
+        body: { userId },
+      });
+
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || "Erro ao excluir usuário");
+
+      toast.success("Usuário desativado com sucesso!");
+      loadUsers();
+    } catch (error: any) {
+      console.error("Erro ao desativar usuário:", error);
+      toast.error(error.message || "Erro ao desativar usuário");
     }
-
-    toast.success("Usuário excluído com sucesso!");
-    loadUsers();
   };
 
   const getRoleBadge = (role: string) => {
@@ -98,7 +112,7 @@ export function UserManagement() {
                 onClick={() => handleDelete(user.id)}
               >
                 <Trash className="mr-2 h-4 w-4" />
-                Excluir
+                Desativar
               </Button>
             </CardContent>
           </Card>
