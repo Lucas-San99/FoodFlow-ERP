@@ -37,28 +37,25 @@ export function UserDialog({ open, onOpenChange, onSuccess }: UserDialogProps) {
     setLoading(true);
 
     try {
-      // Create the user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-          },
-          emailRedirectTo: `${window.location.origin}/`,
+      // Get the current session to use for authentication
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error("Sessão não encontrada");
+      }
+
+      // Call the edge function to create the user
+      const { data, error } = await supabase.functions.invoke('create-user', {
+        body: {
+          email,
+          password,
+          fullName,
+          role,
         },
       });
 
-      if (authError) throw authError;
-      if (!authData.user) throw new Error("Usuário não foi criado");
-
-      // Add the role
-      const { error: roleError } = await supabase.from("user_roles").insert({
-        user_id: authData.user.id,
-        role: role,
-      });
-
-      if (roleError) throw roleError;
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || "Erro ao criar usuário");
 
       toast.success("Usuário criado com sucesso!");
       setFullName("");
@@ -68,6 +65,7 @@ export function UserDialog({ open, onOpenChange, onSuccess }: UserDialogProps) {
       onOpenChange(false);
       onSuccess();
     } catch (error: any) {
+      console.error("Erro ao criar usuário:", error);
       toast.error(error.message || "Erro ao criar usuário");
     } finally {
       setLoading(false);
