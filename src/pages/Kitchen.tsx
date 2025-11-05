@@ -8,10 +8,55 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
 export default function Kitchen() {
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
   const [orders, setOrders] = useState<any[]>([]);
+  const [unitId, setUnitId] = useState<string | null>(null);
+
+  // Get kitchen user's unit
+  useEffect(() => {
+    const getKitchenUnit = async () => {
+      if (!user?.id) return;
+
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("unit_id")
+        .eq("user_id", user.id)
+        .eq("role", "kitchen")
+        .single();
+
+      if (error) {
+        console.error("Erro ao carregar unidade:", error);
+        return;
+      }
+
+      setUnitId(data?.unit_id || null);
+    };
+
+    getKitchenUnit();
+  }, [user]);
 
   const loadOrders = async () => {
+    if (!unitId) return;
+
+    // First, get all waiters from the same unit
+    const { data: waiters, error: waitersError } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("unit_id", unitId);
+
+    if (waitersError) {
+      console.error("Erro ao carregar garçons:", waitersError);
+      return;
+    }
+
+    const waiterIds = waiters?.map((w) => w.id) || [];
+    
+    if (waiterIds.length === 0) {
+      setOrders([]);
+      return;
+    }
+
+    // Then get orders from those waiters
     const { data, error } = await supabase
       .from("orders")
       .select(`
@@ -21,6 +66,7 @@ export default function Kitchen() {
         profiles!orders_waiter_id_fkey (full_name)
       `)
       .in("status", ["pending", "preparing"])
+      .in("waiter_id", waiterIds)
       .order("created_at", { ascending: true });
 
     if (error) {
@@ -32,44 +78,46 @@ export default function Kitchen() {
   };
 
   useEffect(() => {
-    loadOrders();
+    if (unitId) {
+      loadOrders();
 
-    // Realtime updates
-    const channel = supabase
-      .channel("orders-changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "orders",
-        },
-        () => {
-          loadOrders();
-        }
-      )
-      .subscribe();
+      // Realtime updates
+      const channel = supabase
+        .channel("orders-changes")
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "orders",
+          },
+          () => {
+            loadOrders();
+          }
+        )
+        .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [unitId]);
 
   const handleCompleteOrder = async (orderId: string) => {
     const { error } = await supabase
       .from("orders")
       .update({
-        status: "ready",
+        status: "delivered",
         completed_at: new Date().toISOString(),
       })
       .eq("id", orderId);
 
     if (error) {
-      toast.error("Erro ao completar pedido");
+      toast.error("Erro ao confirmar saída");
       return;
     }
 
-    toast.success("Pedido pronto!");
+    toast.success("Saída confirmada!");
     loadOrders();
   };
 
@@ -96,7 +144,13 @@ export default function Kitchen() {
         </div>
 
         <div className="space-y-4">
-          {orders.length === 0 ? (
+          {!unitId ? (
+            <Card>
+              <CardContent className="p-6 text-center text-muted-foreground">
+                Você não está associado a nenhuma unidade
+              </CardContent>
+            </Card>
+          ) : orders.length === 0 ? (
             <Card>
               <CardContent className="p-6 text-center text-muted-foreground">
                 Nenhum pedido na fila
@@ -106,54 +160,45 @@ export default function Kitchen() {
             orders.map((order) => (
               <Card
                 key={order.id}
-                className="transition-all hover:shadow-md"
                 style={{ backgroundColor: "hsl(var(--kitchen-card))" }}
               >
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <CardTitle className="text-lg">
+                <CardContent className="p-6 space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex items-start justify-between">
+                      <h3 className="text-xl font-bold">
                         {order.menu_items?.name}
-                      </CardTitle>
-                      <div className="flex gap-2">
-                        <Badge variant="secondary">
-                          Mesa {order.tables?.table_number}
-                        </Badge>
-                        <Badge variant="outline">
-                          Qtd: {order.quantity}
-                        </Badge>
+                      </h3>
+                      <Badge variant="outline" className="text-base">
+                        Qtd: {order.quantity}
+                      </Badge>
+                    </div>
+                    
+                    {order.observations && (
+                      <div className="rounded-md bg-muted/50 p-3">
+                        <p className="text-sm font-medium mb-1">Observações:</p>
+                        <p className="text-sm">
+                          {order.observations}
+                        </p>
+                      </div>
+                    )}
+                    
+                    <div className="flex gap-4 text-sm text-muted-foreground pt-2">
+                      <div>
+                        <span className="font-medium">Mesa:</span> {order.tables?.table_number}
+                      </div>
+                      <div>
+                        <span className="font-medium">Garçom:</span> {order.profiles?.full_name}
                       </div>
                     </div>
-                    <Badge
-                      variant={order.status === "pending" ? "default" : "secondary"}
-                    >
-                      {order.status === "pending" ? "Novo" : "Preparando"}
-                    </Badge>
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {order.observations && (
-                    <div className="rounded-md bg-muted/50 p-3">
-                      <p className="text-sm font-medium">Observações:</p>
-                      <p className="text-sm text-muted-foreground">
-                        {order.observations}
-                      </p>
-                    </div>
-                  )}
-                  <div className="text-sm text-muted-foreground">
-                    <p>Garçom: {order.profiles?.full_name}</p>
-                    <p>
-                      Pedido às:{" "}
-                      {new Date(order.created_at).toLocaleTimeString("pt-BR")}
-                    </p>
-                  </div>
+                  
                   <Button
                     className="w-full"
                     size="lg"
                     onClick={() => handleCompleteOrder(order.id)}
                   >
                     <CheckCircle className="mr-2 h-5 w-5" />
-                    Pedido Pronto
+                    Confirmar Saída
                   </Button>
                 </CardContent>
               </Card>

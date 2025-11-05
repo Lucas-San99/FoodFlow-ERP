@@ -142,20 +142,31 @@ export type Database = {
           deleted_at: string | null
           full_name: string
           id: string
+          unit_id: string | null
         }
         Insert: {
           created_at?: string | null
           deleted_at?: string | null
           full_name: string
           id: string
+          unit_id?: string | null
         }
         Update: {
           created_at?: string | null
           deleted_at?: string | null
           full_name?: string
           id?: string
+          unit_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tables: {
         Row: {
@@ -193,26 +204,55 @@ export type Database = {
         }
         Relationships: []
       }
+      units: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
           id: string
           role: Database["public"]["Enums"]["app_role"]
+          unit_id: string | null
           user_id: string
         }
         Insert: {
           created_at?: string | null
           id?: string
           role: Database["public"]["Enums"]["app_role"]
+          unit_id?: string | null
           user_id: string
         }
         Update: {
           created_at?: string | null
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          unit_id?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
