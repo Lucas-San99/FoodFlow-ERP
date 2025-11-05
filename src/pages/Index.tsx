@@ -10,12 +10,8 @@ const Index = () => {
       <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-primary/10">
         <UtensilsCrossed className="h-12 w-12 text-primary" />
       </div>
-      <h1 className="mb-4 text-4xl font-bold text-primary md:text-5xl">
-        Sistema de Gestão de Mesas
-      </h1>
-      <p className="mb-8 max-w-md text-lg text-muted-foreground">
-        Gerencie mesas, pedidos e cardápio de forma eficiente
-      </p>
+      <h1 className="mb-4 text-4xl font-bold text-primary md:text-5xl">Boteco do Morcego</h1>
+      <p className="mb-8 max-w-md text-lg text-muted-foreground">Controle de Pedidos</p>
       <Button size="lg" onClick={() => navigate("/auth")}>
         Acessar Sistema
       </Button>
