@@ -46,6 +46,30 @@ export type Database = {
           },
         ]
       }
+      insumos: {
+        Row: {
+          created_at: string | null
+          id: string
+          nome: string
+          quantidade_atual: number
+          unidade_de_medida: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          nome: string
+          quantidade_atual?: number
+          unidade_de_medida: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          nome?: string
+          quantidade_atual?: number
+          unidade_de_medida?: string
+        }
+        Relationships: []
+      }
       menu_items: {
         Row: {
           available: boolean | null
@@ -56,6 +80,7 @@ export type Database = {
           image_url: string | null
           name: string
           price: number
+          recipe: Json | null
           updated_at: string | null
         }
         Insert: {
@@ -67,6 +92,7 @@ export type Database = {
           image_url?: string | null
           name: string
           price: number
+          recipe?: Json | null
           updated_at?: string | null
         }
         Update: {
@@ -78,6 +104,7 @@ export type Database = {
           image_url?: string | null
           name?: string
           price?: number
+          recipe?: Json | null
           updated_at?: string | null
         }
         Relationships: []
@@ -259,6 +286,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      deduct_stock_for_order: { Args: { order_id: string }; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -270,7 +298,7 @@ export type Database = {
     Enums: {
       app_role: "admin" | "waiter" | "kitchen"
       order_status: "pending" | "preparing" | "ready" | "delivered"
-      table_status: "available" | "occupied" | "closed"
+      table_status: "available" | "occupied" | "closed" | "waiting_payment"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -400,7 +428,7 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "waiter", "kitchen"],
       order_status: ["pending", "preparing", "ready", "delivered"],
-      table_status: ["available", "occupied", "closed"],
+      table_status: ["available", "occupied", "closed", "waiting_payment"],
     },
   },
 } as const

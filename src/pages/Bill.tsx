@@ -71,13 +71,21 @@ export default function Bill() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.from("consent_log").insert({
+      const { error: consentError } = await supabase.from("consent_log").insert({
         table_id: tableId,
         phone: phone || null,
         consent_given: consent,
       });
 
-      if (error) throw error;
+      if (consentError) throw consentError;
+
+      // Update table status to waiting_payment
+      const { error: tableError } = await supabase
+        .from("tables")
+        .update({ status: "waiting_payment" })
+        .eq("id", tableId);
+
+      if (tableError) throw tableError;
 
       setConsentGiven(consent);
       toast.success("Preferências registradas!");

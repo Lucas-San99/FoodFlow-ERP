@@ -77,6 +77,21 @@ export default function Waiter() {
     loadTables();
   };
 
+  const handleMarkWaitingPayment = async (tableId: string) => {
+    const { error } = await supabase
+      .from("tables")
+      .update({ status: "waiting_payment" })
+      .eq("id", tableId);
+
+    if (error) {
+      toast.error("Erro ao atualizar status da mesa");
+      return;
+    }
+
+    toast.success("Mesa marcada como aguardando pagamento!");
+    loadTables();
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card">
@@ -102,6 +117,7 @@ export default function Waiter() {
           tables={tables}
           onOpenTable={handleOpenTable}
           onCloseTable={handleCloseTable}
+          onMarkWaitingPayment={handleMarkWaitingPayment}
         />
       </main>
 

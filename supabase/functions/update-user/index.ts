@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
 
     const { userId, fullName, role, unitId } = parsed.data;
 
-    console.log('Updating user:', { userId, fullName, role, unitId });
+    console.log('Updating user profile');
 
     // Update the user's profile
     const { error: profileError } = await supabaseAdmin

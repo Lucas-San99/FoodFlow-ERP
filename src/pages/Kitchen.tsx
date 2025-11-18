@@ -104,21 +104,38 @@ export default function Kitchen() {
   }, [unitId]);
 
   const handleCompleteOrder = async (orderId: string) => {
-    const { error } = await supabase
-      .from("orders")
-      .update({
-        status: "delivered",
-        completed_at: new Date().toISOString(),
-      })
-      .eq("id", orderId);
+    try {
+      // Call the function to deduct stock
+      const { error: stockError } = await supabase.rpc('deduct_stock_for_order', {
+        order_id: orderId
+      });
 
-    if (error) {
-      toast.error("Erro ao confirmar saída");
-      return;
+      if (stockError) {
+        console.error('Stock deduction error:', stockError);
+        toast.error("Erro ao dar baixa no estoque");
+        return;
+      }
+
+      // Update order status
+      const { error } = await supabase
+        .from("orders")
+        .update({
+          status: "delivered",
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", orderId);
+
+      if (error) {
+        toast.error("Erro ao confirmar saída");
+        return;
+      }
+
+      toast.success("Saída confirmada e estoque atualizado!");
+      loadOrders();
+    } catch (error) {
+      console.error('Error completing order:', error);
+      toast.error("Erro ao processar pedido");
     }
-
-    toast.success("Saída confirmada!");
-    loadOrders();
   };
 
   return (

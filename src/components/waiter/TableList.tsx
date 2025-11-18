@@ -7,19 +7,22 @@ interface TableListProps {
   tables: any[];
   onOpenTable: (table: any) => void;
   onCloseTable: (tableId: string) => void;
+  onMarkWaitingPayment: (tableId: string) => void;
 }
 
-export function TableList({ tables, onOpenTable, onCloseTable }: TableListProps) {
+export function TableList({ tables, onOpenTable, onCloseTable, onMarkWaitingPayment }: TableListProps) {
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "outline"> = {
+    const variants: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
       available: "outline",
       occupied: "default",
-      closed: "secondary",
+      waiting_payment: "secondary",
+      closed: "destructive",
     };
 
     const labels: Record<string, string> = {
       available: "Disponível",
       occupied: "Ocupada",
+      waiting_payment: "Aguardando Pagamento",
       closed: "Fechada",
     };
 
@@ -55,25 +58,52 @@ export function TableList({ tables, onOpenTable, onCloseTable }: TableListProps)
                     R$ {(table.total_amount || 0).toFixed(2)}
                   </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2">
                   <Button
                     size="sm"
                     variant="outline"
-                    className="flex-1"
+                    className="w-full"
                     onClick={() => onOpenTable(table)}
                   >
                     <Plus className="mr-2 h-4 w-4" />
-                    Adicionar
+                    Adicionar Item
                   </Button>
-                  <Button
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => onCloseTable(table.id)}
-                  >
-                    <Receipt className="mr-2 h-4 w-4" />
-                    Fechar
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="flex-1"
+                      onClick={() => onMarkWaitingPayment(table.id)}
+                    >
+                      <Receipt className="mr-2 h-4 w-4" />
+                      Aguardar Pgto
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => onCloseTable(table.id)}
+                    >
+                      Fechar Mesa
+                    </Button>
+                  </div>
                 </div>
+              </>
+            )}
+            {table.status === "waiting_payment" && (
+              <>
+                <div>
+                  <p className="text-sm text-muted-foreground">Total:</p>
+                  <p className="text-lg font-bold text-primary">
+                    R$ {(table.total_amount || 0).toFixed(2)}
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  className="w-full"
+                  onClick={() => onCloseTable(table.id)}
+                >
+                  Fechar Mesa
+                </Button>
               </>
             )}
           </CardContent>
