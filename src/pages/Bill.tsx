@@ -71,13 +71,17 @@ export default function Bill() {
     setLoading(true);
 
     try {
-      const { error: consentError } = await supabase.from("consent_log").insert({
-        table_id: tableId,
-        phone: phone || null,
-        consent_given: consent,
+      // Call the secure edge function to submit consent
+      const { data, error: consentError } = await supabase.functions.invoke('submit-consent', {
+        body: {
+          tableId,
+          phone: phone || null,
+          consentGiven: consent,
+        }
       });
 
       if (consentError) throw consentError;
+      if (data?.error) throw new Error(data.error);
 
       // Update table status to waiting_payment
       const { error: tableError } = await supabase
@@ -90,7 +94,8 @@ export default function Bill() {
       setConsentGiven(consent);
       toast.success("Preferências registradas!");
     } catch (error: any) {
-      toast.error("Erro ao registrar preferências");
+      console.error("Erro ao registrar preferências:", error);
+      toast.error(error.message || "Erro ao registrar preferências");
     } finally {
       setLoading(false);
     }
