@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { CheckCircle, XCircle, Receipt } from "lucide-react";
+import { CheckCircle, XCircle, Receipt, AlertCircle } from "lucide-react";
 import { z } from "zod";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const phoneSchema = z.object({
   phone: z.string().trim().regex(/^\+?[1-9]\d{1,14}$/, "Telefone inválido").optional().or(z.literal("")),
@@ -15,48 +16,48 @@ const phoneSchema = z.object({
 
 export default function Bill() {
   const { tableId } = useParams();
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get('token');
   const [table, setTable] = useState<any>(null);
   const [orders, setOrders] = useState<any[]>([]);
   const [phone, setPhone] = useState("");
   const [consentGiven, setConsentGiven] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadBillData();
   }, [tableId]);
 
   const loadBillData = async () => {
-    if (!tableId) return;
-
-    // Load table data
-    const { data: tableData, error: tableError } = await supabase
-      .from("tables")
-      .select("*")
-      .eq("id", tableId)
-      .single();
-
-    if (tableError) {
-      toast.error("Erro ao carregar dados da conta");
+    if (!tableId || !token) {
+      setError("Link inválido. Solicite um novo link ao garçom.");
       return;
     }
 
-    setTable(tableData);
+    setLoading(true);
+    setError(null);
 
-    // Load orders
-    const { data: ordersData, error: ordersError } = await supabase
-      .from("orders")
-      .select(`
-        *,
-        menu_items (name, price)
-      `)
-      .eq("table_id", tableId);
+    try {
+      // Validate token and load data through secure edge function
+      const { data, error: functionError } = await supabase.functions.invoke('get-bill-data', {
+        body: {
+          tableId,
+          token,
+        }
+      });
 
-    if (ordersError) {
-      toast.error("Erro ao carregar pedidos");
-      return;
+      if (functionError) throw functionError;
+      if (data?.error) throw new Error(data.error);
+
+      setTable(data.table);
+      setOrders(data.orders || []);
+    } catch (error: any) {
+      console.error("Erro ao carregar conta:", error);
+      setError(error.message || "Erro ao carregar conta. O link pode estar expirado.");
+    } finally {
+      setLoading(false);
     }
-
-    setOrders(ordersData || []);
   };
 
   const handleConsentSubmit = async (consent: boolean) => {
@@ -101,7 +102,32 @@ export default function Bill() {
     }
   };
 
-  if (!table) {
+  if (error) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-secondary/30 to-accent/10 p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
+              <AlertCircle className="h-8 w-8 text-destructive" />
+            </div>
+            <CardTitle className="text-center text-2xl">Acesso Negado</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Link Inválido ou Expirado</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+            <p className="text-center text-sm text-muted-foreground">
+              Por favor, solicite um novo link ao garçom para visualizar sua conta.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (loading || !table) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <p>Carregando...</p>
