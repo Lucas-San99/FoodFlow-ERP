@@ -14,6 +14,38 @@ export type Database = {
   }
   public: {
     Tables: {
+      bill_tokens: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          table_id: string
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          table_id: string
+          token: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          table_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bill_tokens_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "tables"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       consent_log: {
         Row: {
           consent_given: boolean
@@ -286,6 +318,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_expired_bill_tokens: { Args: never; Returns: undefined }
       deduct_stock_for_order: { Args: { order_id: string }; Returns: undefined }
       has_role: {
         Args: {

@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import { TableList } from "@/components/waiter/TableList";
 import { NewTableDialog } from "@/components/waiter/NewTableDialog";
 import { OrderDialog } from "@/components/waiter/OrderDialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { generateTableQRCodeUrl } from "@/lib/qrcode";
 
 export default function Waiter() {
   const { signOut, user } = useAuth();
@@ -15,6 +17,9 @@ export default function Waiter() {
   const [newTableOpen, setNewTableOpen] = useState(false);
   const [orderDialogOpen, setOrderDialogOpen] = useState(false);
   const [selectedTable, setSelectedTable] = useState<any>(null);
+  const [billDialogOpen, setBillDialogOpen] = useState(false);
+  const [billQRUrl, setBillQRUrl] = useState<string | null>(null);
+  const [billToken, setBillToken] = useState<string | null>(null);
 
   const loadTables = async () => {
     const { data, error } = await supabase
@@ -78,18 +83,37 @@ export default function Waiter() {
   };
 
   const handleMarkWaitingPayment = async (tableId: string) => {
-    const { error } = await supabase
-      .from("tables")
-      .update({ status: "waiting_payment" })
-      .eq("id", tableId);
+    try {
+      // Generate bill token
+      const { data, error: tokenError } = await supabase.functions.invoke('generate-bill-token', {
+        body: { tableId }
+      });
 
-    if (error) {
-      toast.error("Erro ao atualizar status da mesa");
-      return;
+      if (tokenError) throw tokenError;
+      if (data?.error) throw new Error(data.error);
+
+      const token = data.token;
+
+      // Update table status
+      const { error: updateError } = await supabase
+        .from("tables")
+        .update({ status: "waiting_payment" })
+        .eq("id", tableId);
+
+      if (updateError) throw updateError;
+
+      // Generate QR code URL
+      const qrUrl = generateTableQRCodeUrl(tableId, token);
+      setBillQRUrl(qrUrl);
+      setBillToken(token);
+      setBillDialogOpen(true);
+
+      toast.success("QR Code da conta gerado com sucesso!");
+      loadTables();
+    } catch (error: any) {
+      console.error("Erro ao gerar conta:", error);
+      toast.error(error.message || "Erro ao gerar conta");
     }
-
-    toast.success("Mesa marcada como aguardando pagamento!");
-    loadTables();
   };
 
   return (
@@ -134,6 +158,36 @@ export default function Waiter() {
         table={selectedTable}
         onSuccess={loadTables}
       />
+
+      <Dialog open={billDialogOpen} onOpenChange={setBillDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center">Conta Digital</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-center text-sm text-muted-foreground">
+              Apresente este QR Code para o cliente visualizar a conta
+            </p>
+            {billQRUrl && (
+              <div className="flex justify-center">
+                <img 
+                  src={billQRUrl} 
+                  alt="QR Code da Conta" 
+                  className="rounded-lg border-2 border-primary"
+                />
+              </div>
+            )}
+            <div className="rounded-lg bg-muted p-3">
+              <p className="text-center text-xs font-mono break-all text-muted-foreground">
+                {billToken}
+              </p>
+            </div>
+            <p className="text-center text-xs text-muted-foreground">
+              Token válido por 2 horas
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
