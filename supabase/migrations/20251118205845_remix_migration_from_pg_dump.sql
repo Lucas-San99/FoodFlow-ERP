@@ -4,7 +4,7 @@
 
 
 -- Dumped from database version 17.6
--- Dumped by pg_dump version 17.6
+-- Dumped by pg_dump version 17.7
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -54,8 +54,45 @@ CREATE TYPE public.order_status AS ENUM (
 CREATE TYPE public.table_status AS ENUM (
     'available',
     'occupied',
-    'closed'
+    'closed',
+    'waiting_payment'
 );
+
+
+--
+-- Name: deduct_stock_for_order(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.deduct_stock_for_order(order_id uuid) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  order_record RECORD;
+  recipe_item JSONB;
+  insumo_id_val UUID;
+  quantidade_val NUMERIC;
+BEGIN
+  -- Get order details
+  SELECT o.quantity, m.recipe
+  INTO order_record
+  FROM orders o
+  JOIN menu_items m ON m.id = o.menu_item_id
+  WHERE o.id = order_id;
+
+  -- Loop through each ingredient in the recipe
+  FOR recipe_item IN SELECT * FROM jsonb_array_elements(order_record.recipe)
+  LOOP
+    insumo_id_val := (recipe_item->>'insumo_id')::UUID;
+    quantidade_val := (recipe_item->>'quantidade')::NUMERIC;
+    
+    -- Deduct stock
+    UPDATE insumos
+    SET quantidade_atual = quantidade_atual - (quantidade_val * order_record.quantity)
+    WHERE id = insumo_id_val;
+  END LOOP;
+END;
+$$;
 
 
 --
@@ -129,6 +166,19 @@ CREATE TABLE public.consent_log (
 
 
 --
+-- Name: insumos; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.insumos (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    nome text NOT NULL,
+    unidade_de_medida text NOT NULL,
+    quantidade_atual numeric DEFAULT 0 NOT NULL,
+    created_at timestamp with time zone DEFAULT now()
+);
+
+
+--
 -- Name: menu_items; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -141,7 +191,8 @@ CREATE TABLE public.menu_items (
     available boolean DEFAULT true,
     image_url text,
     created_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone DEFAULT now()
+    updated_at timestamp with time zone DEFAULT now(),
+    recipe jsonb DEFAULT '[]'::jsonb
 );
 
 
@@ -223,6 +274,14 @@ CREATE TABLE public.user_roles (
 
 ALTER TABLE ONLY public.consent_log
     ADD CONSTRAINT consent_log_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: insumos insumos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.insumos
+    ADD CONSTRAINT insumos_pkey PRIMARY KEY (id);
 
 
 --
@@ -376,6 +435,13 @@ ALTER TABLE ONLY public.user_roles
 
 
 --
+-- Name: insumos Admins can manage insumos; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Admins can manage insumos" ON public.insumos USING (public.has_role(auth.uid(), 'admin'::public.app_role));
+
+
+--
 -- Name: menu_items Admins can manage menu items; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -418,10 +484,14 @@ CREATE POLICY "Admins can view consent logs" ON public.consent_log FOR SELECT US
 
 
 --
--- Name: orders Authenticated users can view orders; Type: POLICY; Schema: public; Owner: -
+-- Name: orders Admins can view unit orders; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY "Authenticated users can view orders" ON public.orders FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Admins can view unit orders" ON public.orders FOR SELECT USING ((public.has_role(auth.uid(), 'admin'::public.app_role) AND (EXISTS ( SELECT 1
+   FROM ((public.profiles p
+     JOIN public.tables t ON ((t.id = orders.table_id)))
+     JOIN public.profiles waiter ON ((waiter.id = t.waiter_id)))
+  WHERE ((p.id = auth.uid()) AND (p.unit_id = waiter.unit_id))))));
 
 
 --
@@ -450,6 +520,24 @@ CREATE POLICY "Everyone can view available menu items" ON public.menu_items FOR 
 --
 
 CREATE POLICY "Kitchen and admins can update orders" ON public.orders FOR UPDATE USING ((public.has_role(auth.uid(), 'kitchen'::public.app_role) OR public.has_role(auth.uid(), 'admin'::public.app_role)));
+
+
+--
+-- Name: insumos Kitchen and waiters can view insumos; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Kitchen and waiters can view insumos" ON public.insumos FOR SELECT USING ((public.has_role(auth.uid(), 'kitchen'::public.app_role) OR public.has_role(auth.uid(), 'waiter'::public.app_role)));
+
+
+--
+-- Name: orders Kitchen can view unit orders; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Kitchen can view unit orders" ON public.orders FOR SELECT USING ((public.has_role(auth.uid(), 'kitchen'::public.app_role) AND (EXISTS ( SELECT 1
+   FROM ((public.profiles p
+     JOIN public.tables t ON ((t.id = orders.table_id)))
+     JOIN public.profiles waiter ON ((waiter.id = t.waiter_id)))
+  WHERE ((p.id = auth.uid()) AND (p.unit_id = waiter.unit_id))))));
 
 
 --
@@ -495,10 +583,23 @@ CREATE POLICY "Waiters can create orders" ON public.orders FOR INSERT WITH CHECK
 
 
 --
+-- Name: orders Waiters can view own orders; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Waiters can view own orders" ON public.orders FOR SELECT USING ((public.has_role(auth.uid(), 'waiter'::public.app_role) AND (waiter_id = auth.uid())));
+
+
+--
 -- Name: consent_log; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
 ALTER TABLE public.consent_log ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: insumos; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.insumos ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: menu_items; Type: ROW SECURITY; Schema: public; Owner: -
