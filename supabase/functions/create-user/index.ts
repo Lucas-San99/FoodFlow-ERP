@@ -33,29 +33,40 @@ Deno.serve(async (req) => {
       }
     )
 
-    // Verify that the requesting user is an admin
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      throw new Error('Não autorizado')
-    }
-
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token)
-    
-    if (userError || !user) {
-      throw new Error('Não autorizado')
-    }
-
-    // Check if user is admin
-    const { data: roleData, error: roleError } = await supabaseAdmin
+    // Check if this is a bootstrap request (creating first admin)
+    const { count: adminCount } = await supabaseAdmin
       .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single()
+      .select('*', { count: 'exact', head: true })
+      .eq('role', 'admin')
 
-    if (roleError || roleData?.role !== 'admin') {
-      throw new Error('Apenas administradores podem criar usuários')
+    const isBootstrap = adminCount === 0
+
+    // Verify that the requesting user is an admin (unless bootstrap)
+    if (!isBootstrap) {
+      const authHeader = req.headers.get('Authorization')
+      if (!authHeader) {
+        throw new Error('Não autorizado')
+      }
+
+      const token = authHeader.replace('Bearer ', '')
+      const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token)
+      
+      if (userError || !user) {
+        throw new Error('Não autorizado')
+      }
+
+      // Check if user is admin
+      const { data: roleData, error: roleError } = await supabaseAdmin
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single()
+
+      if (roleError || roleData?.role !== 'admin') {
+        throw new Error('Apenas administradores podem criar usuários')
+      }
     }
+
 
     // Parse and validate request body
     const body = await req.json()
