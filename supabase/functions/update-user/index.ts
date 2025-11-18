@@ -1,16 +1,17 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.79.0';
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface UpdateUserRequest {
-  userId: string;
-  fullName: string;
-  role: 'admin' | 'waiter' | 'kitchen';
-  unitId?: string | null;
-}
+const updateUserSchema = z.object({
+  userId: z.string().uuid('ID de usuário inválido'),
+  fullName: z.string().trim().min(1, 'Nome é obrigatório').max(100, 'Nome muito longo'),
+  role: z.enum(['admin', 'waiter', 'kitchen'], { invalid_type_error: 'Função inválida' }),
+  unitId: z.string().uuid('ID de unidade inválido').nullable().optional(),
+});
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -47,7 +48,24 @@ Deno.serve(async (req) => {
       throw new Error('Apenas administradores podem atualizar usuários');
     }
 
-    const { userId, fullName, role, unitId }: UpdateUserRequest = await req.json();
+    const body = await req.json();
+    const parsed = updateUserSchema.safeParse(body);
+    
+    if (!parsed.success) {
+      console.error('Validation error:', parsed.error.errors);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: parsed.error.errors[0].message
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400
+        }
+      );
+    }
+
+    const { userId, fullName, role, unitId } = parsed.data;
 
     console.log('Updating user:', { userId, fullName, role, unitId });
 

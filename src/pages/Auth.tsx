@@ -5,6 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { UtensilsCrossed } from "lucide-react";
+import { z } from "zod";
+import { toast } from "sonner";
+
+const loginSchema = z.object({
+  email: z.string().trim().email("Email inválido").max(255, "Email muito longo"),
+  password: z.string().min(8, "Senha deve ter no mínimo 8 caracteres").max(128, "Senha muito longa"),
+});
 
 export default function Auth() {
   const [email, setEmail] = useState("");
@@ -14,10 +21,16 @@ export default function Auth() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const result = loginSchema.safeParse({ email, password });
+    if (!result.success) {
+      toast.error(result.error.errors[0].message);
+      return;
+    }
+    
     setLoading(true);
-
     try {
-      await signIn(email, password);
+      await signIn(result.data.email, result.data.password);
     } catch (error) {
       console.error("Erro no login:", error);
     } finally {
