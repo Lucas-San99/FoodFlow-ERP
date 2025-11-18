@@ -6,6 +6,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import Setup from "./pages/Setup";
 import Waiter from "./pages/Waiter";
 import Kitchen from "./pages/Kitchen";
 import Admin from "./pages/Admin";
@@ -23,6 +24,7 @@ const App = () => (
       <AuthProvider>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/setup" element={<Setup />} />
             <Route path="/auth" element={<Auth />} />
             <Route
               path="/waiter"

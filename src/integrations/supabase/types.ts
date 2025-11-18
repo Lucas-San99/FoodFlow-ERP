@@ -265,16 +265,19 @@ export type Database = {
       }
       units: {
         Row: {
+          address: string | null
           created_at: string
           id: string
           name: string
         }
         Insert: {
+          address?: string | null
           created_at?: string
           id?: string
           name: string
         }
         Update: {
+          address?: string | null
           created_at?: string
           id?: string
           name?: string
@@ -326,6 +329,15 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      setup_first_admin: {
+        Args: {
+          p_email: string
+          p_full_name: string
+          p_password: string
+          p_unit_name: string
+        }
+        Returns: Json
       }
     }
     Enums: {
