@@ -1,17 +1,18 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.79.0'
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-interface CreateUserRequest {
-  email: string
-  password: string
-  fullName: string
-  role: 'waiter' | 'kitchen' | 'admin'
-  unitId?: string | null
-}
+const createUserSchema = z.object({
+  email: z.string().trim().email('Email inválido').max(255, 'Email muito longo'),
+  password: z.string().min(8, 'Senha deve ter no mínimo 8 caracteres').max(128, 'Senha muito longa'),
+  fullName: z.string().trim().min(1, 'Nome é obrigatório').max(100, 'Nome muito longo'),
+  role: z.enum(['waiter', 'kitchen', 'admin'], { invalid_type_error: 'Função inválida' }),
+  unitId: z.string().uuid('ID de unidade inválido').nullable().optional(),
+})
 
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
@@ -56,8 +57,25 @@ Deno.serve(async (req) => {
       throw new Error('Apenas administradores podem criar usuários')
     }
 
-    // Parse request body
-    const { email, password, fullName, role, unitId }: CreateUserRequest = await req.json()
+    // Parse and validate request body
+    const body = await req.json()
+    const parsed = createUserSchema.safeParse(body)
+    
+    if (!parsed.success) {
+      console.error('Validation error:', parsed.error.errors)
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: parsed.error.errors[0].message
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400
+        }
+      )
+    }
+
+    const { email, password, fullName, role, unitId } = parsed.data
 
     console.log(`Criando usuário: ${email} com role ${role} e unidade ${unitId}`)
 

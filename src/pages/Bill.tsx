@@ -7,6 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { CheckCircle, XCircle, Receipt } from "lucide-react";
+import { z } from "zod";
+
+const phoneSchema = z.object({
+  phone: z.string().trim().regex(/^\+?[1-9]\d{1,14}$/, "Telefone inválido").optional().or(z.literal("")),
+});
 
 export default function Bill() {
   const { tableId } = useParams();
@@ -55,6 +60,14 @@ export default function Bill() {
   };
 
   const handleConsentSubmit = async (consent: boolean) => {
+    if (phone) {
+      const result = phoneSchema.safeParse({ phone });
+      if (!result.success) {
+        toast.error(result.error.errors[0].message);
+        return;
+      }
+    }
+    
     setLoading(true);
 
     try {

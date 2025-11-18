@@ -18,6 +18,21 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { z } from "zod";
+
+const createUserSchema = z.object({
+  email: z.string().trim().email("Email inválido").max(255, "Email muito longo"),
+  password: z.string().min(8, "Senha deve ter no mínimo 8 caracteres").max(128, "Senha muito longa"),
+  fullName: z.string().trim().min(1, "Nome é obrigatório").max(100, "Nome muito longo"),
+  role: z.enum(["waiter", "kitchen"]),
+  unitId: z.string().uuid("ID de unidade inválido").optional(),
+});
+
+const updateUserSchema = z.object({
+  fullName: z.string().trim().min(1, "Nome é obrigatório").max(100, "Nome muito longo"),
+  role: z.enum(["waiter", "kitchen"]),
+  unitId: z.string().uuid("ID de unidade inválido").optional(),
+});
 
 interface UserDialogProps {
   open: boolean;
@@ -67,6 +82,28 @@ export function UserDialog({ open, onOpenChange, onSuccess, user }: UserDialogPr
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate input
+    if (user) {
+      const result = updateUserSchema.safeParse({ fullName, role, unitId: unitId || undefined });
+      if (!result.success) {
+        toast.error(result.error.errors[0].message);
+        return;
+      }
+    } else {
+      const result = createUserSchema.safeParse({ 
+        email, 
+        password, 
+        fullName, 
+        role, 
+        unitId: unitId || undefined 
+      });
+      if (!result.success) {
+        toast.error(result.error.errors[0].message);
+        return;
+      }
+    }
+    
     setLoading(true);
 
     try {
