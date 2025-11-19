@@ -36,12 +36,17 @@ export default function Kitchen() {
   }, [user]);
 
   const loadOrders = async () => {
-    if (!unitId) return;
+    if (!unitId) {
+      console.log("Kitchen: aguardando unit_id");
+      return;
+    }
+
+    console.log("Kitchen: carregando pedidos da unidade:", unitId);
 
     // First, get all waiters from the same unit
     const { data: waiters, error: waitersError } = await supabase
       .from("profiles")
-      .select("id")
+      .select("id, full_name")
       .eq("unit_id", unitId);
 
     if (waitersError) {
@@ -50,8 +55,10 @@ export default function Kitchen() {
     }
 
     const waiterIds = waiters?.map((w) => w.id) || [];
+    console.log(`Kitchen: encontrados ${waiterIds.length} garçons na unidade:`, waiters?.map(w => w.full_name));
     
     if (waiterIds.length === 0) {
+      console.log("Kitchen: nenhum garçom encontrado na unidade");
       setOrders([]);
       return;
     }
@@ -74,6 +81,7 @@ export default function Kitchen() {
       return;
     }
 
+    console.log(`Kitchen: ${data?.length || 0} pedidos carregados da mesma unidade`);
     setOrders(data || []);
   };
 
