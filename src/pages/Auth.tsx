@@ -40,13 +40,23 @@ export default function Auth() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-secondary/30 to-accent/10 p-4">
+           {" "}
       <Card className="w-full max-w-md shadow-xl">
+                {/* ALTERAÇÃO: Removendo o space-y do CardHeader para gerenciar o espaçamento manualmente. */}       {" "}
         <CardHeader className="text-center">
-          <div className="mx-auto">
-            <img src={logoAuth} alt="Ponto de Fuga" className="h-32.5 w-auto object-contain" />
+                   {" "}
+          <div className="mx-auto **mb-0**">
+            {" "}
+            {/* ADICIONADO: mb-0 para garantir que não há margem inferior na div do logo */}           {" "}
+            {/* O logoAuth que você está usando parece ter um espaço transparente grande em volta do ícone central. */}
+                        <img src={logoAuth} alt="FoodFlow ERP Logo" className="h-32.5 w-auto object-contain" />       
+             {" "}
           </div>
-          <CardDescription className="text-base">Faça login para acessar o sistema</CardDescription>
+                    {/* ALTERAÇÃO: Adicionada classe **-mt-4** (margin-top negativa) para puxar o texto para cima. */} 
+                  <CardDescription className="text-base **-mt-4**">Faça login para acessar o sistema</CardDescription> 
+               {" "}
         </CardHeader>
+               {" "}
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
