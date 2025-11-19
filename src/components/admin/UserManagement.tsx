@@ -13,35 +13,56 @@ export function UserManagement() {
   const [selectedUser, setSelectedUser] = useState<any>(null);
 
   const loadUsers = async () => {
-    const { data: profilesData, error: profilesError } = await supabase
-      .from("profiles")
-      .select("*, units(name)")
-      .is("deleted_at", null);
+    try {
+      // Load all profiles
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, full_name, unit_id, deleted_at, units(name)");
 
-    if (profilesError) {
+      if (profilesError) {
+        console.error("Error loading profiles:", profilesError);
+        toast.error("Erro ao carregar usuários");
+        return;
+      }
+
+      console.log("Profiles loaded:", profilesData);
+
+      // Filter out deleted profiles and kitchens
+      const activeProfiles = profilesData?.filter(
+        (p) => !p.deleted_at && !p.full_name.startsWith("KITCHEN-")
+      ) || [];
+
+      console.log("Active profiles (non-kitchen):", activeProfiles);
+
+      // Load roles
+      const { data: rolesData, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("*");
+
+      if (rolesError) {
+        console.error("Error loading roles:", rolesError);
+        toast.error("Erro ao carregar roles");
+        return;
+      }
+
+      console.log("Roles loaded:", rolesData);
+
+      // Combine profiles with roles
+      const usersWithRoles = activeProfiles.map((profile) => {
+        const userRole = rolesData?.find((role) => role.user_id === profile.id);
+        return {
+          ...profile,
+          role: userRole?.role || null,
+          unit_name: profile.units?.name || null,
+        };
+      });
+
+      console.log("Users with roles:", usersWithRoles);
+      setUsers(usersWithRoles);
+    } catch (error) {
+      console.error("Error in loadUsers:", error);
       toast.error("Erro ao carregar usuários");
-      return;
     }
-
-    const { data: rolesData, error: rolesError } = await supabase
-      .from("user_roles")
-      .select("*");
-
-    if (rolesError) {
-      toast.error("Erro ao carregar roles");
-      return;
-    }
-
-    const usersWithRoles = profilesData?.map((profile) => {
-      const userRole = rolesData?.find((role) => role.user_id === profile.id);
-      return {
-        ...profile,
-        role: userRole?.role || null,
-        unit_name: profile.units?.name || null,
-      };
-    });
-
-    setUsers(usersWithRoles || []);
   };
 
   const handleEdit = (user: any) => {
