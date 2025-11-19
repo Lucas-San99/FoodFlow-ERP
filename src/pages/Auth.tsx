@@ -42,7 +42,7 @@ export default function Auth() {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-secondary/30 to-accent/10 p-4">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="space-y-2 text-center">
-          <div className="mx-auto mb-2">
+          <div className="mx-auto mb-0">
             <img src={logoAuth} alt="Ponto de Fuga" className="h-32.5 w-auto object-contain" />
           </div>
           <CardDescription className="text-base">Faça login para acessar o sistema</CardDescription>
