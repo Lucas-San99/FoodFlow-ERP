@@ -182,6 +182,17 @@ export default function Waiter() {
                 {billToken}
               </p>
             </div>
+            <div className="rounded-lg bg-primary/10 p-3">
+              <p className="text-xs text-muted-foreground mb-2 text-center">Link direto (para teste):</p>
+              <a 
+                href={billQRUrl ? decodeURIComponent(new URL(billQRUrl).searchParams.get('data') || '') : ''}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-primary hover:underline break-all block text-center"
+              >
+                Abrir conta digital
+              </a>
+            </div>
             <p className="text-center text-xs text-muted-foreground">
               Token válido por 2 horas
             </p>
