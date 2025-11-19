@@ -43,7 +43,7 @@ const Index = () => {
       <div className="mx-auto mb-6">
         <img src={logo} alt="Ponto de Fuga" className="h-64 w-auto object-contain" />
       </div>
-      <h1 className="mb-4 text-4xl font-bold text-primary md:text-5xl">Ponto de Fuga</h1>
+      <h1 className="mb-4 text-4xl font-bold text-primary md:text-5xl">FoodFlow ERP</h1>
       <p className="mb-8 max-w-md text-lg text-muted-foreground">Sistema de Gestão</p>
       <Button size="lg" onClick={() => navigate("/auth")}>
         Acessar Sistema
