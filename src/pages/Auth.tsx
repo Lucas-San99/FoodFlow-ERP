@@ -21,13 +21,13 @@ export default function Auth() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const result = loginSchema.safeParse({ email, password });
     if (!result.success) {
       toast.error(result.error.errors[0].message);
       return;
     }
-    
+
     setLoading(true);
     try {
       await signIn(result.data.email, result.data.password);
@@ -45,10 +45,8 @@ export default function Auth() {
           <div className="mx-auto mb-2">
             <img src={logoAuth} alt="Ponto de Fuga" className="h-32 w-auto object-contain" />
           </div>
-          <CardTitle className="text-3xl font-bold">Sistema de Gestão</CardTitle>
-          <CardDescription className="text-base">
-            Faça login para acessar o sistema
-          </CardDescription>
+          <CardTitle className="text-3xl font-bold">FoodFlow ERP</CardTitle>
+          <CardDescription className="text-base">Faça login para acessar o sistema</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
