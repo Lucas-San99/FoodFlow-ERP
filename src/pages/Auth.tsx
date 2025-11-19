@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { UtensilsCrossed } from "lucide-react";
 import { z } from "zod";
 import { toast } from "sonner";
+import logoAuth from "@/assets/logo_auth.png";
 
 const loginSchema = z.object({
   email: z.string().trim().email("Email inválido").max(255, "Email muito longo"),
@@ -42,8 +42,8 @@ export default function Auth() {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-secondary/30 to-accent/10 p-4">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="space-y-2 text-center">
-          <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-            <UtensilsCrossed className="h-8 w-8 text-primary" />
+          <div className="mx-auto mb-2">
+            <img src={logoAuth} alt="Ponto de Fuga" className="h-32 w-auto object-contain" />
           </div>
           <CardTitle className="text-3xl font-bold">Sistema de Gestão</CardTitle>
           <CardDescription className="text-base">
