@@ -26,8 +26,9 @@ export default function Bill() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log("Bill page loaded:", { tableId, token });
     loadBillData();
-  }, [tableId]);
+  }, [tableId, token]);
 
   const loadBillData = async () => {
     if (!tableId || !token) {
@@ -39,6 +40,8 @@ export default function Bill() {
     setError(null);
 
     try {
+      console.log("Loading bill data...", { tableId, token });
+      
       // Validate token and load data through secure edge function
       const { data, error: functionError } = await supabase.functions.invoke('get-bill-data', {
         body: {
@@ -47,8 +50,21 @@ export default function Bill() {
         }
       });
 
-      if (functionError) throw functionError;
-      if (data?.error) throw new Error(data.error);
+      console.log("Edge function response:", { data, error: functionError });
+
+      if (functionError) {
+        console.error("Function error:", functionError);
+        throw functionError;
+      }
+      if (data?.error) {
+        console.error("Data error:", data.error);
+        throw new Error(data.error);
+      }
+
+      console.log("Bill data loaded successfully:", { 
+        table: data.table, 
+        ordersCount: data.orders?.length 
+      });
 
       setTable(data.table);
       setOrders(data.orders || []);
@@ -129,8 +145,12 @@ export default function Bill() {
 
   if (loading || !table) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p>Carregando...</p>
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-gradient-to-br from-background via-secondary/30 to-accent/10 p-4">
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+          <p className="text-lg font-medium">Carregando sua conta...</p>
+        </div>
+        <p className="text-sm text-muted-foreground">Por favor, aguarde alguns instantes</p>
       </div>
     );
   }
