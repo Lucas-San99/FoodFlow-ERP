@@ -35,7 +35,7 @@ export function KitchenManagement() {
         unit_id,
         units:unit_id (name)
       `)
-      .eq("deleted_at", null)
+      .is("deleted_at", null)
       .like("full_name", "KITCHEN-%");
 
     if (error) {
