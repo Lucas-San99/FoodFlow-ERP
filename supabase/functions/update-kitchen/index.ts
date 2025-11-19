@@ -41,7 +41,7 @@ serve(async (req) => {
       });
     }
 
-    const { user_id, identifier, full_name, unit_id } = await req.json();
+    const { user_id, unit_id } = await req.json();
 
     if (!user_id) {
       return new Response(
@@ -50,32 +50,19 @@ serve(async (req) => {
       );
     }
 
-    // Update profile
-    if (full_name || unit_id) {
-      const updates: any = {};
-      if (full_name) updates.full_name = `KITCHEN-${identifier}`;
-      if (unit_id) updates.unit_id = unit_id;
-
+    // Update profile unit_id
+    if (unit_id) {
       await supabaseAdmin
         .from("profiles")
-        .update(updates)
+        .update({ unit_id })
         .eq("id", user_id);
-    }
 
-    // Update unit_id in user_roles if provided
-    if (unit_id) {
+      // Update unit_id in user_roles
       await supabaseAdmin
         .from("user_roles")
         .update({ unit_id })
         .eq("user_id", user_id)
         .eq("role", "kitchen");
-    }
-
-    // Update password if identifier changed
-    if (identifier) {
-      await supabaseAdmin.auth.admin.updateUserById(user_id, {
-        password: identifier,
-      });
     }
 
     return new Response(
