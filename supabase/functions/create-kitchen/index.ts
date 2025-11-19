@@ -41,26 +41,40 @@ serve(async (req) => {
       });
     }
 
-    const { identifier, full_name, unit_id } = await req.json();
+    const { unit_id } = await req.json();
 
-    if (!identifier || !full_name || !unit_id) {
+    if (!unit_id) {
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Verify identifier is unique
-    const { data: existingKitchen } = await supabaseAdmin
-      .from("profiles")
-      .select("id")
-      .eq("full_name", `KITCHEN-${identifier}`)
-      .single();
+    // Generate unique 5-digit identifier
+    let identifier = "";
+    let isUnique = false;
+    let attempts = 0;
+    const maxAttempts = 10;
 
-    if (existingKitchen) {
+    while (!isUnique && attempts < maxAttempts) {
+      identifier = String(Math.floor(10000 + Math.random() * 90000));
+      
+      const { data: existingKitchen } = await supabaseAdmin
+        .from("profiles")
+        .select("id")
+        .eq("full_name", `KITCHEN-${identifier}`)
+        .single();
+
+      if (!existingKitchen) {
+        isUnique = true;
+      }
+      attempts++;
+    }
+
+    if (!isUnique) {
       return new Response(
-        JSON.stringify({ error: "Identificador já existe" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Não foi possível gerar um identificador único" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -87,7 +101,7 @@ serve(async (req) => {
       .insert({ user_id: newUser.user.id, role: "kitchen", unit_id });
 
     return new Response(
-      JSON.stringify({ success: true, user_id: newUser.user.id }),
+      JSON.stringify({ success: true, user_id: newUser.user.id, identifier }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
