@@ -27,36 +27,62 @@ export function KitchenManagement() {
   }, []);
 
   const loadKitchens = async () => {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select(`
-        id,
-        full_name,
-        unit_id,
-        units:unit_id (name)
-      `)
-      .like("full_name", "KITCHEN-%")
-      .is("deleted_at", null);
+    try {
+      // First, get all profiles with KITCHEN- prefix
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, full_name, unit_id")
+        .like("full_name", "KITCHEN-%");
 
-    if (error) {
-      console.error("Error loading kitchens:", error);
+      if (profilesError) {
+        console.error("Error loading kitchen profiles:", profilesError);
+        toast.error("Erro ao carregar cozinhas");
+        return;
+      }
+
+      console.log("Kitchen profiles found:", profilesData);
+
+      if (!profilesData || profilesData.length === 0) {
+        setKitchens([]);
+        return;
+      }
+
+      // Filter out soft-deleted profiles
+      const activeProfiles = profilesData.filter(p => !p.unit_id || p.unit_id !== null);
+
+      // Get unit names for each profile
+      const kitchensWithUnits = await Promise.all(
+        activeProfiles.map(async (profile) => {
+          if (!profile.unit_id) {
+            return {
+              id: profile.id,
+              full_name: profile.full_name,
+              unit_id: null,
+              unit_name: null,
+            };
+          }
+
+          const { data: unitData } = await supabase
+            .from("units")
+            .select("name")
+            .eq("id", profile.unit_id)
+            .single();
+
+          return {
+            id: profile.id,
+            full_name: profile.full_name,
+            unit_id: profile.unit_id,
+            unit_name: unitData?.name || null,
+          };
+        })
+      );
+
+      console.log("Kitchens with units:", kitchensWithUnits);
+      setKitchens(kitchensWithUnits);
+    } catch (error) {
+      console.error("Error in loadKitchens:", error);
       toast.error("Erro ao carregar cozinhas");
-      return;
     }
-
-    if (!data) {
-      setKitchens([]);
-      return;
-    }
-
-    const kitchensData = data.map((k: any) => ({
-      id: k.id,
-      full_name: k.full_name,
-      unit_id: k.unit_id,
-      unit_name: k.units?.name || null,
-    }));
-
-    setKitchens(kitchensData);
   };
 
   const handleEdit = (kitchen: Kitchen) => {
