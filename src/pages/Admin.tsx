@@ -6,6 +6,7 @@ import { MenuManagement } from "@/components/admin/MenuManagement";
 import { UserManagement } from "@/components/admin/UserManagement";
 import { UnitsManagement } from "@/components/admin/UnitsManagement";
 import { StockManagement } from "@/components/admin/StockManagement";
+import { KitchenManagement } from "@/components/admin/KitchenManagement";
 
 export default function Admin() {
   const { signOut } = useAuth();
@@ -24,11 +25,12 @@ export default function Admin() {
 
       <main className="container mx-auto p-4">
         <Tabs defaultValue="menu" className="space-y-6">
-          <TabsList className="grid w-full max-w-2xl grid-cols-4">
+          <TabsList className="grid w-full max-w-2xl grid-cols-5">
             <TabsTrigger value="menu">Cardápio</TabsTrigger>
             <TabsTrigger value="stock">Estoque</TabsTrigger>
             <TabsTrigger value="users">Usuários</TabsTrigger>
             <TabsTrigger value="units">Unidades</TabsTrigger>
+            <TabsTrigger value="kitchens">Cozinhas</TabsTrigger>
           </TabsList>
 
           <TabsContent value="menu">
@@ -45,6 +47,10 @@ export default function Admin() {
 
           <TabsContent value="units">
             <UnitsManagement />
+          </TabsContent>
+
+          <TabsContent value="kitchens">
+            <KitchenManagement />
           </TabsContent>
         </Tabs>
       </main>
