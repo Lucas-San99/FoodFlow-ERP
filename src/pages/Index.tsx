@@ -45,9 +45,14 @@ const Index = () => {
       </div>
       <h1 className="mb-4 text-4xl font-bold text-primary md:text-5xl">FoodFlow ERP</h1>
       <p className="mb-8 max-w-md text-lg text-muted-foreground">Sistema de Gestão</p>
-      <Button size="lg" onClick={() => navigate("/auth")}>
-        Acessar Sistema
-      </Button>
+      <div className="flex flex-col gap-4 sm:flex-row">
+        <Button size="lg" onClick={() => navigate("/auth")}>
+          Acessar Sistema
+        </Button>
+        <Button size="lg" variant="outline" onClick={() => navigate("/kitchen-login")}>
+          Acesso Cozinha
+        </Button>
+      </div>
     </div>
   );
 };

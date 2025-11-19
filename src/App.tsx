@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import Setup from "./pages/Setup";
 import Waiter from "./pages/Waiter";
 import Kitchen from "./pages/Kitchen";
+import KitchenLogin from "./pages/KitchenLogin";
 import Admin from "./pages/Admin";
 import Bill from "./pages/Bill";
 import Unauthorized from "./pages/Unauthorized";
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/setup" element={<Setup />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/kitchen-login" element={<KitchenLogin />} />
             <Route
               path="/waiter"
               element={
