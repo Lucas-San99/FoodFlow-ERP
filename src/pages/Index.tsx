@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/logo_erp.png";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -41,10 +41,10 @@ const Index = () => {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-background via-secondary/30 to-accent/10 p-4 text-center">
       <div className="mx-auto mb-6">
-        <img src={logo} alt="Boteco do Morcego" className="h-48 w-48 object-contain" />
+        <img src={logo} alt="FoodFlow ERP" className="h-64 w-auto object-contain" />
       </div>
-      <h1 className="mb-4 text-4xl font-bold text-primary md:text-5xl">Boteco do Morcego</h1>
-      <p className="mb-8 max-w-md text-lg text-muted-foreground">Controle de Pedidos</p>
+      <h1 className="mb-4 text-4xl font-bold text-primary md:text-5xl">FoodFlow ERP</h1>
+      <p className="mb-8 max-w-md text-lg text-muted-foreground">Management. Optimized.</p>
       <Button size="lg" onClick={() => navigate("/auth")}>
         Acessar Sistema
       </Button>
