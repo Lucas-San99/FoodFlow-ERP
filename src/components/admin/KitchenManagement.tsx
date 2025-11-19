@@ -35,11 +35,17 @@ export function KitchenManagement() {
         unit_id,
         units:unit_id (name)
       `)
-      .is("deleted_at", null)
-      .like("full_name", "KITCHEN-%");
+      .like("full_name", "KITCHEN-%")
+      .is("deleted_at", null);
 
     if (error) {
+      console.error("Error loading kitchens:", error);
       toast.error("Erro ao carregar cozinhas");
+      return;
+    }
+
+    if (!data) {
+      setKitchens([]);
       return;
     }
 
@@ -121,20 +127,28 @@ export function KitchenManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {kitchens.map((kitchen) => (
-                <TableRow key={kitchen.id}>
-                  <TableCell>{kitchen.full_name.replace("KITCHEN-", "")}</TableCell>
-                  <TableCell>{kitchen.unit_name || "Sem unidade"}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" onClick={() => handleEdit(kitchen)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDelete(kitchen)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+              {kitchens.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={3} className="text-center text-muted-foreground">
+                    Nenhuma cozinha cadastrada
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                kitchens.map((kitchen) => (
+                  <TableRow key={kitchen.id}>
+                    <TableCell>{kitchen.full_name.replace("KITCHEN-", "")}</TableCell>
+                    <TableCell>{kitchen.unit_name || "Sem unidade"}</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="sm" onClick={() => handleEdit(kitchen)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(kitchen)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>

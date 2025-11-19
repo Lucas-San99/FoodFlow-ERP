@@ -50,6 +50,21 @@ serve(async (req) => {
       );
     }
 
+    // Check if unit already has a kitchen
+    const { data: existingKitchenInUnit } = await supabaseAdmin
+      .from("user_roles")
+      .select("id")
+      .eq("unit_id", unit_id)
+      .eq("role", "kitchen")
+      .single();
+
+    if (existingKitchenInUnit) {
+      return new Response(
+        JSON.stringify({ error: "Esta unidade já possui uma cozinha" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Generate unique 5-digit identifier
     let identifier = "";
     let isUnique = false;
