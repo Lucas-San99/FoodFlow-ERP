@@ -9,6 +9,7 @@ import { UserManagement } from "@/components/admin/UserManagement";
 import { UnitsManagement } from "@/components/admin/UnitsManagement";
 import { StockManagement } from "@/components/admin/StockManagement";
 import { KitchenManagement } from "@/components/admin/KitchenManagement";
+import { DemoDataButton } from "@/components/admin/DemoDataButton";
 import { supabase } from "@/integrations/supabase/client";
 
 const DashboardOverview = ({ 
@@ -149,7 +150,12 @@ export default function Admin() {
           </TabsContent>
 
           <TabsContent value="units">
-            <UnitsManagement />
+            <div className="space-y-4">
+              <div className="flex justify-end">
+                <DemoDataButton />
+              </div>
+              <UnitsManagement />
+            </div>
           </TabsContent>
 
           <TabsContent value="kitchens">
