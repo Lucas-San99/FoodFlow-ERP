@@ -23,6 +23,13 @@ export default function Bill() {
   const [orders, setOrders] = useState<any[]>([]);
   const [phone, setPhone] = useState("");
   const [acceptsPromotions, setAcceptsPromotions] = useState(false);
+
+  // Clear phone when checkbox is unchecked
+  useEffect(() => {
+    if (!acceptsPromotions) {
+      setPhone("");
+    }
+  }, [acceptsPromotions]);
   const [consentGiven, setConsentGiven] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -254,25 +261,23 @@ export default function Bill() {
                 </div>
               </div>
 
-              {acceptsPromotions && (
-                <div className="space-y-2">
-                  <Label htmlFor="phone">
-                    Telefone <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="(00) 00000-0000"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    disabled={loading}
-                    required={acceptsPromotions}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Formato: (XX) XXXXX-XXXX ou (XX) XXXX-XXXX
-                  </p>
-                </div>
-              )}
+              <div className="space-y-2">
+                <Label htmlFor="phone" className={!acceptsPromotions ? "text-muted-foreground" : ""}>
+                  Telefone {acceptsPromotions && <span className="text-destructive">*</span>}
+                </Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="(00) 00000-0000"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  disabled={!acceptsPromotions || loading}
+                  required={acceptsPromotions}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Formato: (XX) XXXXX-XXXX ou (XX) XXXX-XXXX
+                </p>
+              </div>
 
               <Button
                 className="w-full"
