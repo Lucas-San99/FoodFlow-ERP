@@ -1,4 +1,5 @@
 import { useAuth } from "@/contexts/AuthContext";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,8 +9,15 @@ import { UserManagement } from "@/components/admin/UserManagement";
 import { UnitsManagement } from "@/components/admin/UnitsManagement";
 import { StockManagement } from "@/components/admin/StockManagement";
 import { KitchenManagement } from "@/components/admin/KitchenManagement";
+import { supabase } from "@/integrations/supabase/client";
 
-const DashboardOverview = () => {
+const DashboardOverview = ({ 
+  ordersInProgress, 
+  occupiedTables 
+}: { 
+  ordersInProgress: number; 
+  occupiedTables: number; 
+}) => {
   return (
     <div className="grid gap-6 md:grid-cols-3">
       <Card>
@@ -18,7 +26,7 @@ const DashboardOverview = () => {
           <ChefHat className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">--</div>
+          <div className="text-2xl font-bold">{ordersInProgress}</div>
           <p className="text-xs text-muted-foreground">Total de pedidos ativos</p>
         </CardContent>
       </Card>
@@ -29,7 +37,7 @@ const DashboardOverview = () => {
           <Users className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">--</div>
+          <div className="text-2xl font-bold">{occupiedTables}</div>
           <p className="text-xs text-muted-foreground">Mesas com clientes</p>
         </CardContent>
       </Card>
@@ -40,7 +48,7 @@ const DashboardOverview = () => {
           <Activity className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">--</div>
+          <div className="text-2xl font-bold text-green-600">Online</div>
           <p className="text-xs text-muted-foreground">Operacional</p>
         </CardContent>
       </Card>
@@ -50,6 +58,53 @@ const DashboardOverview = () => {
 
 export default function Admin() {
   const { signOut } = useAuth();
+  const [ordersInProgress, setOrdersInProgress] = useState(0);
+  const [occupiedTables, setOccupiedTables] = useState(0);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      // Count orders in progress (pending or preparing)
+      const { count: ordersCount } = await supabase
+        .from("orders")
+        .select("*", { count: "exact", head: true })
+        .in("status", ["pending", "preparing"]);
+
+      // Count occupied tables
+      const { count: tablesCount } = await supabase
+        .from("tables")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "occupied");
+
+      setOrdersInProgress(ordersCount || 0);
+      setOccupiedTables(tablesCount || 0);
+    };
+
+    fetchDashboardData();
+
+    // Set up real-time subscriptions for live updates
+    const ordersSubscription = supabase
+      .channel("orders-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "orders" },
+        () => fetchDashboardData()
+      )
+      .subscribe();
+
+    const tablesSubscription = supabase
+      .channel("tables-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "tables" },
+        () => fetchDashboardData()
+      )
+      .subscribe();
+
+    return () => {
+      ordersSubscription.unsubscribe();
+      tablesSubscription.unsubscribe();
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -75,7 +130,10 @@ export default function Admin() {
           </TabsList>
 
           <TabsContent value="dashboard">
-            <DashboardOverview />
+            <DashboardOverview 
+              ordersInProgress={ordersInProgress}
+              occupiedTables={occupiedTables}
+            />
           </TabsContent>
 
           <TabsContent value="menu">
