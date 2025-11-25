@@ -12,7 +12,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { FileText, Loader2 } from "lucide-react";
+import { FileText, Loader2, Download } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export function SalesReport() {
   const [open, setOpen] = useState(false);
@@ -38,23 +40,39 @@ export function SalesReport() {
     setResult(null);
 
     try {
+      // Query com joins para buscar dados completos
       const { data, error } = await supabase
         .from("tables")
-        .select("total_amount")
+        .select(`
+          id,
+          table_number,
+          closed_at,
+          total_amount,
+          profiles:waiter_id(full_name),
+          orders(
+            quantity,
+            menu_items(name)
+          )
+        `)
         .eq("status", "closed")
         .gte("closed_at", startDate)
-        .lte("closed_at", endDate);
+        .lte("closed_at", endDate)
+        .order("closed_at", { ascending: false });
 
       if (error) throw error;
 
+      // Calcular totais para exibição
       const total = data.reduce((acc, table) => acc + (table.total_amount || 0), 0);
       const count = data.length;
 
       setResult({ total, count });
 
+      // Gerar PDF
+      generatePDF(data, startDate, endDate, total, count);
+
       toast({
         title: "Relatório gerado",
-        description: "Os dados foram processados com sucesso",
+        description: "O PDF foi baixado com sucesso",
       });
     } catch (error) {
       console.error("Erro ao gerar relatório:", error);
@@ -66,6 +84,91 @@ export function SalesReport() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const generatePDF = (data: any[], startDate: string, endDate: string, total: number, count: number) => {
+    const doc = new jsPDF();
+
+    // Título
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text("Relatório de Vendas - FoodFlow", 105, 15, { align: "center" });
+
+    // Subtítulo com período
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+    const formattedStart = new Date(startDate).toLocaleDateString("pt-BR");
+    const formattedEnd = new Date(endDate).toLocaleDateString("pt-BR");
+    doc.text(`Período: ${formattedStart} a ${formattedEnd}`, 105, 22, { align: "center" });
+
+    // Resumo
+    doc.setFontSize(10);
+    doc.text(`Total de Mesas: ${count} | Total Geral: ${formatCurrency(total)}`, 105, 28, { align: "center" });
+
+    // Preparar dados da tabela
+    const tableData = data.map((table) => {
+      // Formatar data/hora
+      const dateTime = table.closed_at 
+        ? new Date(table.closed_at).toLocaleString("pt-BR", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        : "N/A";
+
+      // Nome do garçom
+      const waiterName = table.profiles?.full_name || "Sem garçom";
+
+      // Concatenar itens consumidos
+      const items = table.orders && table.orders.length > 0
+        ? table.orders
+            .map((order: any) => {
+              const itemName = order.menu_items?.name || "Item desconhecido";
+              return `${order.quantity}x ${itemName}`;
+            })
+            .join(", ")
+        : "Sem itens";
+
+      // Valor total
+      const totalValue = formatCurrency(table.total_amount || 0);
+
+      return [
+        dateTime,
+        `Mesa ${table.table_number || "?"}`,
+        waiterName,
+        items,
+        totalValue,
+      ];
+    });
+
+    // Gerar tabela com autoTable
+    autoTable(doc, {
+      head: [["Data/Hora", "Mesa", "Garçom", "Itens Consumidos", "Total (R$)"]],
+      body: tableData,
+      startY: 35,
+      styles: {
+        fontSize: 8,
+        cellPadding: 3,
+      },
+      headStyles: {
+        fillColor: [41, 128, 185],
+        textColor: 255,
+        fontStyle: "bold",
+      },
+      columnStyles: {
+        0: { cellWidth: 30 },
+        1: { cellWidth: 20 },
+        2: { cellWidth: 30 },
+        3: { cellWidth: 80 },
+        4: { cellWidth: 25, halign: "right" },
+      },
+      margin: { left: 10, right: 10 },
+    });
+
+    // Salvar PDF
+    doc.save("relatorio_vendas.pdf");
   };
 
   const formatCurrency = (value: number) => {
@@ -120,10 +223,13 @@ export function SalesReport() {
             {loading ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Processando...
+                Gerando PDF...
               </>
             ) : (
-              "Processar"
+              <>
+                <Download className="h-4 w-4" />
+                Gerar e Baixar PDF
+              </>
             )}
           </Button>
 
