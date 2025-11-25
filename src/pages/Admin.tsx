@@ -10,6 +10,7 @@ import { UnitsManagement } from "@/components/admin/UnitsManagement";
 import { StockManagement } from "@/components/admin/StockManagement";
 import { KitchenManagement } from "@/components/admin/KitchenManagement";
 import { DemoDataButton } from "@/components/admin/DemoDataButton";
+import { SalesReport } from "@/components/admin/SalesReport";
 import { supabase } from "@/integrations/supabase/client";
 
 const DashboardOverview = ({ 
@@ -20,37 +21,48 @@ const DashboardOverview = ({
   occupiedTables: number; 
 }) => {
   return (
-    <div className="grid gap-6 md:grid-cols-3">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Pedidos em Preparo</CardTitle>
-          <ChefHat className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{ordersInProgress}</div>
-          <p className="text-xs text-muted-foreground">Total de pedidos ativos</p>
-        </CardContent>
-      </Card>
+    <div className="space-y-6">
+      <div className="grid gap-6 md:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pedidos em Preparo</CardTitle>
+            <ChefHat className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{ordersInProgress}</div>
+            <p className="text-xs text-muted-foreground">Total de pedidos ativos</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Mesas Ocupadas</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{occupiedTables}</div>
+            <p className="text-xs text-muted-foreground">Mesas com clientes</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Status do Sistema</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">Online</div>
+            <p className="text-xs text-muted-foreground">Operacional</p>
+          </CardContent>
+        </Card>
+      </div>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Mesas Ocupadas</CardTitle>
-          <Users className="h-4 w-4 text-muted-foreground" />
+        <CardHeader>
+          <CardTitle>Relatórios Gerenciais</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{occupiedTables}</div>
-          <p className="text-xs text-muted-foreground">Mesas com clientes</p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Status do Sistema</CardTitle>
-          <Activity className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-green-600">Online</div>
-          <p className="text-xs text-muted-foreground">Operacional</p>
+          <SalesReport />
         </CardContent>
       </Card>
     </div>
