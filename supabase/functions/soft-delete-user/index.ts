@@ -53,9 +53,13 @@ Deno.serve(async (req) => {
     }
 
     // Parse request body
-    const { userId }: SoftDeleteUserRequest = await req.json()
+    const body = await req.json()
+    console.log('Request body received:', body)
+    
+    const { userId }: SoftDeleteUserRequest = body
 
     if (!userId) {
+      console.error('userId not found in body:', body)
       throw new Error('userId é obrigatório')
     }
 
