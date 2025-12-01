@@ -43,29 +43,28 @@ export function SalesReport() {
       // Ajustar endDate para incluir o final do dia
       const adjustedEndDate = endDate ? `${endDate}T23:59:59` : endDate;
 
-      // Query com joins para buscar dados completos
+      // Query focada em orders (pedidos) no período
       const { data, error } = await supabase
-        .from("tables")
+        .from("orders")
         .select(`
           id,
-          table_number,
-          closed_at,
-          total_amount,
+          quantity,
+          item_price,
+          created_at,
+          completed_at,
+          status,
+          menu_items(name),
           profiles:waiter_id(full_name),
-          orders:orders!orders_table_id_fkey(
-            quantity,
-            menu_items(name)
-          )
+          tables:table_id(table_number)
         `)
-        .eq("status", "closed")
-        .gte("closed_at", startDate)
-        .lte("closed_at", adjustedEndDate)
-        .order("closed_at", { ascending: false });
+        .gte("created_at", startDate)
+        .lte("created_at", adjustedEndDate)
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
 
       // Calcular totais para exibição
-      const total = data.reduce((acc, table) => acc + (table.total_amount || 0), 0);
+      const total = data.reduce((acc, order) => acc + (order.item_price * order.quantity), 0);
       const count = data.length;
 
       setResult({ total, count });
@@ -106,13 +105,13 @@ export function SalesReport() {
 
     // Resumo
     doc.setFontSize(10);
-    doc.text(`Total de Mesas: ${count} | Total Geral: ${formatCurrency(total)}`, 105, 28, { align: "center" });
+    doc.text(`Total de Pedidos: ${count} | Total Geral: ${formatCurrency(total)}`, 105, 28, { align: "center" });
 
-    // Preparar dados da tabela
-    const tableData = data.map((table) => {
-      // Formatar data/hora
-      const dateTime = table.closed_at 
-        ? new Date(table.closed_at).toLocaleString("pt-BR", {
+    // Preparar dados da tabela - cada linha é um pedido
+    const tableData = data.map((order) => {
+      // Formatar data/hora da venda
+      const dateTime = order.created_at 
+        ? new Date(order.created_at).toLocaleString("pt-BR", {
             day: "2-digit",
             month: "2-digit",
             year: "numeric",
@@ -122,33 +121,30 @@ export function SalesReport() {
         : "N/A";
 
       // Nome do garçom
-      const waiterName = table.profiles?.full_name || "Sem garçom";
+      const waiterName = order.profiles?.full_name || "Sem garçom";
 
-      // Concatenar itens consumidos
-      const items = table.orders && table.orders.length > 0
-        ? table.orders
-            .map((order: any) => {
-              const itemName = order.menu_items?.name || "Item desconhecido";
-              return `${order.quantity}x ${itemName}`;
-            })
-            .join(", ")
-        : "Sem itens";
+      // Item vendido
+      const itemName = order.menu_items?.name || "Item desconhecido";
+      const itemDescription = `${order.quantity}x ${itemName}`;
 
-      // Valor total
-      const totalValue = formatCurrency(table.total_amount || 0);
+      // Número da mesa
+      const tableNumber = order.tables?.table_number ? `Mesa ${order.tables.table_number}` : "N/A";
+
+      // Valor da venda (quantidade * preço unitário)
+      const saleValue = formatCurrency((order.item_price || 0) * (order.quantity || 1));
 
       return [
         dateTime,
-        `Mesa ${table.table_number || "?"}`,
+        tableNumber,
         waiterName,
-        items,
-        totalValue,
+        itemDescription,
+        saleValue,
       ];
     });
 
     // Gerar tabela com autoTable
     autoTable(doc, {
-      head: [["Data/Hora", "Mesa", "Garçom", "Itens Consumidos", "Total (R$)"]],
+      head: [["Data/Hora", "Mesa", "Garçom", "Item Vendido", "Valor (R$)"]],
       body: tableData,
       startY: 35,
       styles: {
@@ -247,7 +243,7 @@ export function SalesReport() {
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Quantidade de Mesas:</span>
+                  <span className="text-muted-foreground">Quantidade de Pedidos:</span>
                   <span className="font-semibold text-lg">
                     {result.count}
                   </span>
