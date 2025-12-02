@@ -94,7 +94,7 @@ export function UserManagement() {
 
       // Call the edge function to soft delete the user
       const { data, error } = await supabase.functions.invoke('soft-delete-user', {
-        body: { userId },
+        body: { user_id: userId },
       });
 
       if (error) throw error;
