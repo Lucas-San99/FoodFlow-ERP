@@ -25,6 +25,7 @@ export default function Waiter() {
   const [billToken, setBillToken] = useState<string | null>(null);
   const [tablesServedToday, setTablesServedToday] = useState(0);
   const [totalSoldToday, setTotalSoldToday] = useState(0);
+  const [userName, setUserName] = useState<string>("Garçom");
 
   const loadTables = async () => {
     const { data, error } = await supabase
@@ -38,6 +39,20 @@ export default function Waiter() {
     }
 
     setTables(data || []);
+  };
+
+  const loadUserName = async () => {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", user.id)
+      .single();
+
+    if (!error && data) {
+      setUserName(data.full_name);
+    }
   };
 
   const loadDashboardData = async () => {
@@ -67,6 +82,7 @@ export default function Waiter() {
   useEffect(() => {
     loadTables();
     loadDashboardData();
+    loadUserName();
 
     // Realtime updates
     const channel = supabase
@@ -176,7 +192,7 @@ export default function Waiter() {
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card">
         <div className="container mx-auto flex items-center justify-between p-4">
-          <h1 className="text-2xl font-bold text-primary">Garçom - Mesas</h1>
+          <h1 className="text-2xl font-bold text-primary">{userName} - Mesas</h1>
           <Button variant="outline" onClick={signOut}>
             <LogOut className="mr-2 h-4 w-4" />
             Sair
