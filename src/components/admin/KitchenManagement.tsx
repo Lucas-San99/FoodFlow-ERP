@@ -77,8 +77,15 @@ export function KitchenManagement() {
         })
       );
 
-      console.log("Kitchens with units:", kitchensWithUnits);
-      setKitchens(kitchensWithUnits);
+      // Sort alphabetically by unit_name (or full_name if no unit)
+      const sortedKitchens = kitchensWithUnits.sort((a, b) => {
+        const nameA = a.unit_name || a.full_name;
+        const nameB = b.unit_name || b.full_name;
+        return nameA.localeCompare(nameB, 'pt-BR');
+      });
+
+      console.log("Kitchens with units (sorted):", sortedKitchens);
+      setKitchens(sortedKitchens);
     } catch (error) {
       console.error("Error in loadKitchens:", error);
       toast.error("Erro ao carregar cozinhas");
