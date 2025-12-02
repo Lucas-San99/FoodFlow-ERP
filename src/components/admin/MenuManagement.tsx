@@ -66,6 +66,13 @@ export function MenuManagement() {
     return acc;
   }, {} as Record<string, any[]>);
 
+  // Sort items within each category by name alphabetically
+  Object.keys(groupedItems).forEach((category) => {
+    groupedItems[category].sort((a, b) => 
+      a.name.localeCompare(b.name, 'pt-BR')
+    );
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
