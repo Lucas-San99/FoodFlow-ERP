@@ -36,7 +36,11 @@ export function MenuManagement() {
     const { error } = await supabase.from("menu_items").delete().eq("id", id);
 
     if (error) {
-      toast.error("Erro ao excluir item");
+      if (error.code === "23503") {
+        toast.error("Este item não pode ser excluído pois está vinculado a pedidos existentes. Você pode marcá-lo como indisponível.");
+      } else {
+        toast.error("Erro ao excluir item");
+      }
       return;
     }
 
