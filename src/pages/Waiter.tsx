@@ -2,14 +2,17 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LogOut, Plus } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LogOut, Plus, Table2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { TableList } from "@/components/waiter/TableList";
+import { ClosedTableList } from "@/components/waiter/ClosedTableList";
 import { NewTableDialog } from "@/components/waiter/NewTableDialog";
 import { OrderDialog } from "@/components/waiter/OrderDialog";
+import { WaiterDashboard } from "@/components/waiter/WaiterDashboard";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { generateTableQRCodeUrl } from "@/lib/qrcode";
+import { startOfDay, endOfDay } from "date-fns";
 
 export default function Waiter() {
   const { signOut, user } = useAuth();
@@ -20,6 +23,8 @@ export default function Waiter() {
   const [billDialogOpen, setBillDialogOpen] = useState(false);
   const [billQRUrl, setBillQRUrl] = useState<string | null>(null);
   const [billToken, setBillToken] = useState<string | null>(null);
+  const [tablesServedToday, setTablesServedToday] = useState(0);
+  const [totalSoldToday, setTotalSoldToday] = useState(0);
 
   const loadTables = async () => {
     const { data, error } = await supabase
@@ -35,8 +40,33 @@ export default function Waiter() {
     setTables(data || []);
   };
 
+  const loadDashboardData = async () => {
+    if (!user) return;
+
+    const todayStart = startOfDay(new Date()).toISOString();
+    const todayEnd = endOfDay(new Date()).toISOString();
+
+    // Count tables closed today by this waiter
+    const { data: closedTables, error: closedError } = await supabase
+      .from("tables")
+      .select("id, total_amount")
+      .eq("waiter_id", user.id)
+      .eq("status", "closed")
+      .gte("closed_at", todayStart)
+      .lte("closed_at", todayEnd);
+
+    if (closedError) {
+      console.error("Error loading closed tables:", closedError);
+    } else {
+      setTablesServedToday(closedTables?.length || 0);
+      const total = closedTables?.reduce((sum, t) => sum + (t.total_amount || 0), 0) || 0;
+      setTotalSoldToday(total);
+    }
+  };
+
   useEffect(() => {
     loadTables();
+    loadDashboardData();
 
     // Realtime updates
     const channel = supabase
@@ -50,6 +80,7 @@ export default function Waiter() {
         },
         () => {
           loadTables();
+          loadDashboardData();
         }
       )
       .subscribe();
@@ -57,7 +88,7 @@ export default function Waiter() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [user]);
 
   const handleOpenTable = (table: any) => {
     setSelectedTable(table);
@@ -80,11 +111,11 @@ export default function Waiter() {
 
     toast.success("Mesa fechada com sucesso!");
     loadTables();
+    loadDashboardData();
   };
 
   const handleMarkWaitingPayment = async (tableId: string) => {
     try {
-      // Generate bill token
       const { data, error: tokenError } = await supabase.functions.invoke('generate-bill-token', {
         body: { tableId }
       });
@@ -94,7 +125,6 @@ export default function Waiter() {
 
       const token = data.token;
 
-      // Update table status
       const { error: updateError } = await supabase
         .from("tables")
         .update({ status: "waiting_payment" })
@@ -102,7 +132,6 @@ export default function Waiter() {
 
       if (updateError) throw updateError;
 
-      // Generate QR code URL
       const qrUrl = generateTableQRCodeUrl(tableId, token);
       setBillQRUrl(qrUrl);
       setBillToken(token);
@@ -115,6 +144,33 @@ export default function Waiter() {
       toast.error(error.message || "Erro ao gerar conta");
     }
   };
+
+  const handleGenerateReceipt = async (tableId: string) => {
+    try {
+      const { data, error: tokenError } = await supabase.functions.invoke('generate-bill-token', {
+        body: { tableId }
+      });
+
+      if (tokenError) throw tokenError;
+      if (data?.error) throw new Error(data.error);
+
+      const token = data.token;
+
+      const qrUrl = generateTableQRCodeUrl(tableId, token);
+      setBillQRUrl(qrUrl);
+      setBillToken(token);
+      setBillDialogOpen(true);
+
+      toast.success("Recibo gerado com sucesso!");
+    } catch (error: any) {
+      console.error("Erro ao gerar recibo:", error);
+      toast.error(error.message || "Erro ao gerar recibo");
+    }
+  };
+
+  // Filter tables for active (not closed) and closed
+  const activeTables = tables.filter((t) => t.status !== "closed");
+  const closedTables = tables.filter((t) => t.status === "closed");
 
   return (
     <div className="min-h-screen bg-background">
@@ -129,6 +185,11 @@ export default function Waiter() {
       </header>
 
       <main className="container mx-auto p-4">
+        <WaiterDashboard
+          tablesServedToday={tablesServedToday}
+          totalSoldToday={totalSoldToday}
+        />
+
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-xl font-semibold">Gerenciar Mesas</h2>
           <Button onClick={() => setNewTableOpen(true)}>
@@ -137,12 +198,34 @@ export default function Waiter() {
           </Button>
         </div>
 
-        <TableList
-          tables={tables}
-          onOpenTable={handleOpenTable}
-          onCloseTable={handleCloseTable}
-          onMarkWaitingPayment={handleMarkWaitingPayment}
-        />
+        <Tabs defaultValue="active" className="w-full">
+          <TabsList className="mb-4">
+            <TabsTrigger value="active" className="flex items-center gap-2">
+              <Table2 className="h-4 w-4" />
+              Mesas Ativas ({activeTables.length})
+            </TabsTrigger>
+            <TabsTrigger value="closed" className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4" />
+              Mesas Fechadas ({closedTables.length})
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="active">
+            <TableList
+              tables={activeTables}
+              onOpenTable={handleOpenTable}
+              onCloseTable={handleCloseTable}
+              onMarkWaitingPayment={handleMarkWaitingPayment}
+            />
+          </TabsContent>
+
+          <TabsContent value="closed">
+            <ClosedTableList
+              tables={closedTables}
+              onGenerateReceipt={handleGenerateReceipt}
+            />
+          </TabsContent>
+        </Tabs>
       </main>
 
       <NewTableDialog
